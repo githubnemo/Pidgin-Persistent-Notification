@@ -23,8 +23,6 @@ function PurpleClient() {
 
 PurpleClient.prototype = {
     _init: function() {
-        this._iconBoxOriginalStyle = '';
-
         DBus.session.watch_name('im.pidgin.purple.PurpleService', false,
 			Lang.bind(this, this._onPurpleAppeared), null);
     },
@@ -44,10 +42,7 @@ PurpleClient.prototype = {
         let focusApp = Shell.WindowTracker.get_default().focus_app;
 
         if(focusApp == null || focusApp.get_id() != 'pidgin.desktop') {
-            let orgStyle = UserMenuButton._iconBox.get_style();
-            this._iconBoxOriginalStyle = (orgStyle === null) ? '' : orgStyle;
-
-            UserMenuButton._iconBox.set_style("color: red;");
+			UserMenuButton._iconBox.add_style_class_name('pidgin-notification');
         }
     },
 
@@ -55,7 +50,7 @@ PurpleClient.prototype = {
         const PURPLE_CONV_UPDATE_UNSEEN = 4;
 
         if(flags & PURPLE_CONV_UPDATE_UNSEEN) {
-            UserMenuButton._iconBox.set_style(this._iconBoxOriginalStyle);
+			UserMenuButton._iconBox.remove_style_class_name('pidgin-notification');
         }
     },
 }
