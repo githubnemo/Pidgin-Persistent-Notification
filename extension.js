@@ -42,7 +42,7 @@ PurpleClient.prototype = {
         let focusApp = Shell.WindowTracker.get_default().focus_app;
 
         if(focusApp == null || focusApp.get_id() != 'pidgin.desktop') {
-			UserMenuButton._iconBox.add_style_class_name('pidgin-notification');
+			this._addPersistentNotification();
         }
     },
 
@@ -50,9 +50,17 @@ PurpleClient.prototype = {
         const PURPLE_CONV_UPDATE_UNSEEN = 4;
 
         if(flags & PURPLE_CONV_UPDATE_UNSEEN) {
-			UserMenuButton._iconBox.remove_style_class_name('pidgin-notification');
+			this._removePersistentNotification();
         }
     },
+
+	_addPersistentNotification: function() {
+		UserMenuButton._iconBox.add_style_class_name('pidgin-notification');
+	},
+
+	_removePersistentNotification: function() {
+		UserMenuButton._iconBox.remove_style_class_name('pidgin-notification');
+	},
 }
 
 function init() {
