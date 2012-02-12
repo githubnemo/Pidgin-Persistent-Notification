@@ -61,14 +61,24 @@ PurpleClient.prototype = {
 	_removePersistentNotification: function() {
 		UserMenuButton._iconBox.remove_style_class_name('pidgin-notification');
 	},
+
+	destroy: function() {
+		this._proxy.disconnect(this._displayedImMessageId);
+		this._proxy.disconnect(this._conversationUpdated);
+
+		this._removePersistentNotification();
+	},
 }
 
 function init() {
 }
 
+let purpleClient;
+
 function enable() {
-	let purpleClient = new PurpleClient();
+	purpleClient = new PurpleClient();
 }
 
 function disable() {
+	purpleClient.destroy();
 }
