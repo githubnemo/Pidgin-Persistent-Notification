@@ -21,7 +21,11 @@ function PurpleClient() {
     this._init();
 }
 
+const PURPLE_CONV_UPDATE_UNSEEN = 4;
+const PURPLE_MESSAGE_SYSTEM = 0x4;
+
 PurpleClient.prototype = {
+
     _init: function() {
         DBus.session.watch_name('im.pidgin.purple.PurpleService', false,
 			Lang.bind(this, this._onPurpleAppeared), null);
@@ -38,7 +42,11 @@ PurpleClient.prototype = {
 			Lang.bind(this, this._onConversationUpdated));
     },
 
-    _onDisplayedImMsg: function(emitter, _account, _who, _message, _conv, _flags) {
+    _onDisplayedImMsg: function(emitter, _account, _who, _message, _conv, flags) {
+		if(flags & PURPLE_MESSAGE_SYSTEM) {
+			return;
+		}
+
         let focusApp = Shell.WindowTracker.get_default().focus_app;
 
         if(focusApp == null || focusApp.get_id() != 'pidgin.desktop') {
@@ -47,8 +55,6 @@ PurpleClient.prototype = {
     },
 
     _onConversationUpdated: function(emitter, _conv, flags) {
-        const PURPLE_CONV_UPDATE_UNSEEN = 4;
-
         if(flags & PURPLE_CONV_UPDATE_UNSEEN) {
 			this._removePersistentNotification();
         }
