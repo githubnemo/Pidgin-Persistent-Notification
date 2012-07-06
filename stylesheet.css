@@ -1,3 +1,15 @@
 .pidgin-notification {
 	color: red;
 }
+
+/*
+ More prominent stylesheet by MassimoBarbieri.
+
+.pidgin-notification {
+	background-color: rgba(255, 0, 0, 1.0);
+	color: red;
+	border: 1px solid red;
+	padding: 1px;
+	border-radius: 5px;
+}
+*/
