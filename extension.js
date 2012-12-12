@@ -27,8 +27,7 @@ const PURPLE_MESSAGE_SYSTEM = 0x4;
 PurpleClient.prototype = {
 
     _init: function() {
-        DBus.session.watch_name('im.pidgin.purple.PurpleService', false,
-			Lang.bind(this, this._onPurpleAppeared), null);
+		// Nothing to initialize, everything is initialized in enable()
     },
 
     _onPurpleAppeared: function(owner) {
@@ -68,7 +67,12 @@ PurpleClient.prototype = {
 		UserMenuButton._iconBox.remove_style_class_name('pidgin-notification');
 	},
 
-	destroy: function() {
+	enable: function() {
+        DBus.session.watch_name('im.pidgin.purple.PurpleService', false,
+			Lang.bind(this, this._onPurpleAppeared), null);
+	},
+
+	disable: function() {
 		this._proxy.disconnect(this._displayedImMessageId);
 		this._proxy.disconnect(this._conversationUpdated);
 
@@ -77,14 +81,7 @@ PurpleClient.prototype = {
 }
 
 function init() {
+	return new PurpleClient();
 }
 
-let purpleClient;
 
-function enable() {
-	purpleClient = new PurpleClient();
-}
-
-function disable() {
-	purpleClient.destroy();
-}
