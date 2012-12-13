@@ -3,7 +3,7 @@ const Lang = imports.lang;
 const DBus = imports.dbus;
 const Shell = imports.gi.Shell;
 
-let UserMenuButton = Main.panel._statusArea.userMenu;
+let UserMenuButton = Main.panel.statusArea.userMenu;
 
 const PurpleIface = {
     name: 'im.pidgin.purple.PurpleInterface',
@@ -77,7 +77,7 @@ PurpleClient.prototype = {
 		this._proxy.disconnect(this._conversationUpdated);
 
 		this._removePersistentNotification();
-	},
+	}
 }
 
 function init() {
