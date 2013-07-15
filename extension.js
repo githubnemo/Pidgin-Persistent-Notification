@@ -3,7 +3,8 @@ const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const Shell = imports.gi.Shell;
 
-let UserMenuButton = Main.panel.statusArea.userMenu;
+let StatusArea = Main.panel.statusArea || Main.panel._statusArea
+let UserMenuButton = StatusArea.userMenu;
 
 /**
  * Mostly taken from the output of
