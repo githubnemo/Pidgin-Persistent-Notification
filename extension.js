@@ -3,35 +3,57 @@ const Lang = imports.lang;
 const Gio = imports.gi.Gio;
 const Shell = imports.gi.Shell;
 
-let UserMenuButton = Main.panel.statusArea.userMenu;
+const PanelMenu = imports.ui.panelMenu;
+const St = imports.gi.St;
 
 /**
  * Mostly taken from the output of
  * dbus-send --print-reply --dest=im.pidgin.purple.PurpleService \
    /im/pidgin/purple/PurpleObject org.freedesktop.DBus.Introspectable.Introspect
  */
-const PurpleIface = <interface name="im.pidgin.purple.PurpleInterface">
-    <signal name='DisplayedImMsg'>
-        <arg type='i'/>
-        <arg type='s'/>
-        <arg type='s'/>
-        <arg type='i'/>
-        <arg type='i'/>
-    </signal>
-    <signal name='ConversationUpdated'>
-      <arg type='i'/>
-      <arg type='u'/>
-    </signal>
-</interface>;
+const PurpleIface = '<node>\
+	<interface name="im.pidgin.purple.PurpleInterface">\
+		<signal name="DisplayedImMsg">\
+			<arg type="i"/>\
+			<arg type="s"/>\
+			<arg type="s"/>\
+			<arg type="i"/>\
+			<arg type="i"/>\
+		</signal>\
+		<signal name="ConversationUpdated">\
+		  <arg type="i"/>\
+		  <arg type="u"/>\
+		</signal>\
+	</interface>\
+</node>';
 
 const PurpleProxy = Gio.DBusProxy.makeProxyWrapper(PurpleIface);
+
+const PURPLE_CONV_UPDATE_UNSEEN = 4;
+const PURPLE_MESSAGE_SYSTEM = 0x4;
+
+
+
+const PersistentIndicator = new Lang.Class({
+	Name: 'PersistentIndicator',
+	Extends: PanelMenu.Button,
+
+	_init: function() {
+        this.parent(0.0, "Chat Indicator");
+
+		let icon = new St.Icon({
+			icon_name: 'user-available-symbolic',
+			style_class: 'system-status-icon'
+		});
+
+        this.actor.add_actor(icon);
+    },
+});
+
 
 function PurpleClient() {
     this._init();
 }
-
-const PURPLE_CONV_UPDATE_UNSEEN = 4;
-const PURPLE_MESSAGE_SYSTEM = 0x4;
 
 PurpleClient.prototype = {
 
@@ -39,6 +61,8 @@ PurpleClient.prototype = {
         // All DBus signals are connected and need to be disconnected
         // on disable().
 		this._signalsConnected = false;
+
+		this._indicator = null;
     },
 
     /**
@@ -50,8 +74,6 @@ PurpleClient.prototype = {
             this._disconnectFromPidgin();
         }
 
-        this._signalsConnected = true;
-
         this._proxy = new PurpleProxy(Gio.DBus.session,
 			'im.pidgin.purple.PurpleService', '/im/pidgin/purple/PurpleObject');
 
@@ -60,6 +82,8 @@ PurpleClient.prototype = {
 
         this._conversationUpdatedId = this._proxy.connectSignal('ConversationUpdated',
 			Lang.bind(this, this._onConversationUpdated));
+
+		this._signalsConnected = true;
     },
 
     /**
@@ -101,11 +125,11 @@ PurpleClient.prototype = {
     },
 
 	_addPersistentNotification: function() {
-		UserMenuButton._iconBox.add_style_class_name('pidgin-notification');
+		this._indicator.actor.add_style_class_name('pidgin-notification');
 	},
 
 	_removePersistentNotification: function() {
-		UserMenuButton._iconBox.remove_style_class_name('pidgin-notification');
+		this._indicator.actor.remove_style_class_name('pidgin-notification');
 	},
 
     /**
@@ -119,6 +143,7 @@ PurpleClient.prototype = {
 
         this._proxy.disconnectSignal(this._displayedImMessageId);
         this._proxy.disconnectSignal(this._conversationUpdatedId);
+		this._proxy = null;
 
         this._removePersistentNotification();
 
@@ -138,16 +163,23 @@ PurpleClient.prototype = {
             Lang.bind(this, this._onPurpleAppeared),
             Lang.bind(this, this._onPurpleDisappeared)
         );
+
+		this._indicator = new PersistentIndicator;
+
+		Main.panel.addToStatusArea('pidgin-persistent-notification', this._indicator, 1, 'right');
 	},
 
 	disable: function() {
-        if(!this._signalsConnected) {
-            return;
-        }
+		if (this._indicator != null) {
+			this._indicator.destroy();
+		}
 
-        this._disconnectFromPidgin();
+        if(this._signalsConnected) {
+			return;
+		}
 
-        Gio.DBus.session.unwatch_name(this._purpleWatchId);
+		this._disconnectFromPidgin();
+		Gio.DBus.session.unwatch_name(this._purpleWatchId);
 	}
 }
 
