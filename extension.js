@@ -62,22 +62,13 @@ function PurpleClient() {
 PurpleClient.prototype = {
 
 	_init: function() {
-		// All DBus signals are connected and need to be disconnected
-		// on disable().
-		this._signalsConnected = false;
-
 		this._indicator = null;
 	},
 
 	/**
-	 * Pidgin just joined the bus. Connect signals and wait for action.
+	 * Connect signals and wait for action.
 	 */
-	_onPurpleAppeared: function(owner) {
-		if(this._signalsConnected) {
-			global.log('Pidgin appeared again. Reconnecting signals.');
-			this._disconnectFromPidgin();
-		}
-
+	_connectToPurple: function() {
 		this._proxy = new PurpleProxy(Gio.DBus.session,
 			'im.pidgin.purple.PurpleService', '/im/pidgin/purple/PurpleObject');
 
@@ -86,16 +77,6 @@ PurpleClient.prototype = {
 
 		this._conversationUpdatedId = this._proxy.connectSignal('ConversationUpdated',
 			Lang.bind(this, this._onConversationUpdated));
-
-		this._signalsConnected = true;
-	},
-
-	/**
-	 * Pidgin disappeared from the bus. We stop listening and wait for
-	 * Pidgin to return.
-	 */
-	_onPurpleDisappeared: function(owner) {
-		this._disconnectFromPidgin();
 	},
 
 	/**
@@ -141,17 +122,11 @@ PurpleClient.prototype = {
 	 * as there's no way to reset it after disconnecting.
 	 */
 	_disconnectFromPidgin: function() {
-		if(!this._signalsConnected) {
-			return;
-		}
-
 		this._proxy.disconnectSignal(this._displayedImMessageId);
 		this._proxy.disconnectSignal(this._conversationUpdatedId);
 		this._proxy = null;
 
 		this._removePersistentNotification();
-
-		this._signalsConnected = false;
 	},
 
 	/**
@@ -161,29 +136,17 @@ PurpleClient.prototype = {
 	 * or leaves the bus.
 	 */
 	enable: function() {
-		this._purpleWatchId = Gio.DBus.session.watch_name(
-			'im.pidgin.purple.PurpleService',
-			Gio.BusNameWatcherFlags.NONE,
-			Lang.bind(this, this._onPurpleAppeared),
-			Lang.bind(this, this._onPurpleDisappeared)
-		);
-
 		this._indicator = new PersistentIndicator;
 
 		Main.panel.addToStatusArea('pidgin-persistent-notification', this._indicator, 1, 'right');
+
+		this._connectToPurple();
 	},
 
 	disable: function() {
-		if (this._indicator != null) {
-			this._indicator.destroy();
-		}
+		this._indicator.destroy();
 
-		if(this._signalsConnected) {
-			return;
-		}
-
-		this._disconnectFromPidgin();
-		Gio.DBus.session.unwatch_name(this._purpleWatchId);
+		this._disconnectFromPurple();
 	}
 }
 
