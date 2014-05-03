@@ -32,21 +32,25 @@ const PurpleProxy = Gio.DBusProxy.makeProxyWrapper(PurpleIface);
 const PURPLE_CONV_UPDATE_UNSEEN = 4;
 const PURPLE_MESSAGE_SYSTEM = 0x4;
 
-
-
 const PersistentIndicator = new Lang.Class({
 	Name: 'PersistentIndicator',
 	Extends: PanelMenu.Button,
 
 	_init: function() {
-		this.parent(0.0, "Chat Indicator");
+		this.parent(0, "Persistent Indicator", true);
 
-		let icon = new St.Icon({
-			icon_name: 'user-available-symbolic',
-			style_class: 'system-status-icon'
+		this.indicators = new St.BoxLayout({
+			style_class: 'panel-status-indicators-box'
 		});
 
-		this.actor.add_actor(icon);
+		this.icon = new St.Icon({
+			style_class: 'system-status-icon',
+			icon_name: 'user-available-symbolic'
+		});
+
+		this.indicators.add_actor(this.icon);
+
+		this.actor.add_actor(this.indicators);
 	},
 });
 
