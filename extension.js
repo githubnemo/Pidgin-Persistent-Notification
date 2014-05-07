@@ -118,10 +118,10 @@ PurpleClient.prototype = {
 	},
 
 	/**
-	 * Disconnect the Pidgin signal listeners and remove any notification
-	 * as there's no way to reset it after disconnecting.
+	 * Disconnect the Pidgin/libpurple signal listeners and remove
+	 * any notification as there's no way to reset it after disconnecting.
 	 */
-	_disconnectFromPidgin: function() {
+	_disconnectFromPurple: function() {
 		this._proxy.disconnectSignal(this._displayedImMessageId);
 		this._proxy.disconnectSignal(this._conversationUpdatedId);
 		this._proxy = null;
