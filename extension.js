@@ -174,7 +174,10 @@ GajimClient.prototype = {
 
 	_addPersistentNotification: function() {
 		this._indicator.actor.add_style_class_name('gajim-notification');
-		this._clickToFocusHandle = this._indicator.actor.connect('button-press-event', Lang.bind(this, this._focusChatWindow));
+
+		if (this._clickToFocusHandle == null) {
+			this._clickToFocusHandle = this._indicator.actor.connect('button-press-event', Lang.bind(this, this._focusChatWindow));
+		}
 
 		let that = this;
 
