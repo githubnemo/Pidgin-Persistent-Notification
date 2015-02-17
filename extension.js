@@ -170,24 +170,10 @@ PurpleClient.prototype = {
 	 * which is 'conversations' for the conversation window and "buddy_list"
 	 * for the roster.
 	 */
-	_findPidginChatMetaWindow: function() {
-		let windows = findWindowsByAppIdAndRole("pidgin.desktop", "conversation");
-
-		if (windows.length > 0) {
-			return windows[0];
-		}
-
-		return null;
-	},
-
 	_focusChatWindow: function() {
-		let conversationMetaWindow = this._findPidginChatMetaWindow();
-
-		if (conversationMetaWindow == null) {
-			return;
-		}
-
-		focusWindow(conversationMetaWindow);
+		findWindowsByAppIdAndRole('pidgin.desktop', 'conversation').map(function(mw) {
+			focusWindow(mw);
+		});
 	},
 
 	_addPersistentNotification: function() {
