@@ -163,7 +163,6 @@ GajimClient.prototype = {
 	},
 
 	_onGajimWindowFocus: function() {
-		global.log("Removing persistent notification on request");
 		this._removePersistentNotification();
 	},
 
@@ -184,7 +183,6 @@ GajimClient.prototype = {
 				that._windowUnmanagedHandle = mw.connect('unmanaged', Lang.bind(that, that._onGajimWindowClose));
 			}
 			if (that._windowFocusHandle == null) {
-				global.log("connecting focus!");
 				that._windowFocusHandle = mw.connect('focus', Lang.bind(that, that._onGajimWindowFocus));
 			}
 		});
