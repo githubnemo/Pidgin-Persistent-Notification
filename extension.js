@@ -99,7 +99,6 @@ IndicatorExtension.prototype = {
 		Main.panel.addToStatusArea('pidgin-persistent-notification', this._indicator, 1, 'right');
 
 		this._purpleClient = new PurpleClient(this._indicator);
-		this._gajimClient = new GajimClient(this._indicator);
 
 		this._purpleClient.connectToPurple();
 	},
