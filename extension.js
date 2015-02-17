@@ -57,11 +57,10 @@ const PersistentIndicator = new Lang.Class({
 
 // Find all windows with the supplied application ID, e.g. 'pidgin.desktop'
 function findWindowsByAppIdAndRole(appId, role) {
-	let windowTracker = Shell.WindowTracker.get_default();
+	let appSystem = Shell.AppSystem.get_default();
 
-	return global.screen.get_active_workspace().list_windows().filter(function(w) {
-		return (windowTracker.get_window_app(w).get_id() == appId &&
-				w.get_role() == role);
+	return appSystem.lookup_app(appId).get_windows().filter(function(w) {
+		return w.get_role() == role;
 	});
 }
 
