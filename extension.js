@@ -56,16 +56,23 @@ const PersistentIndicator = new Lang.Class({
 
 
 // Find all windows with the supplied application ID, e.g. 'pidgin.desktop'
-function findWindowsByAppId(appId) {
+function findWindowsByAppIdAndRole(appId, role) {
 	let windowTracker = Shell.WindowTracker.get_default();
 
 	return global.screen.get_active_workspace().list_windows().filter(function(w) {
-		return windowTracker.get_window_app(w).get_id() == appId;
+		return (windowTracker.get_window_app(w).get_id() == appId &&
+				w.get_role() == role);
 	});
 }
 
 function focusWindow(metaWindow) {
 	metaWindow.activate(global.get_current_time());
+}
+
+function matchCurrentFocusApp(appId) {
+	let focusApp = Shell.WindowTracker.get_default().focus_app;
+
+	return (focusApp != null && focusApp.get_id() == appId);
 }
 
 function IndicatorExtension() {
@@ -140,9 +147,7 @@ PurpleClient.prototype = {
 			return;
 		}
 
-		let focusApp = Shell.WindowTracker.get_default().focus_app;
-
-		if(focusApp == null || focusApp.get_id() != 'pidgin.desktop') {
+		if(!matchCurrentFocusApp('pidgin.desktop')) {
 			this._addPersistentNotification();
 		}
 	},
@@ -166,14 +171,10 @@ PurpleClient.prototype = {
 	 * for the roster.
 	 */
 	_findPidginChatMetaWindow: function() {
-		let pidginWindows = findWindowsByAppId("pidgin.desktop")
+		let windows = findWindowsByAppIdAndRole("pidgin.desktop", "conversation");
 
-		let conversationMetaWindows = pidginWindows.filter(function(mw) {
-			return mw.get_role() == "conversation";
-		})
-
-		if (conversationMetaWindows.length > 0) {
-			return conversationMetaWindows[0];
+		if (windows.length > 0) {
+			return windows[0];
 		}
 
 		return null;
@@ -191,12 +192,16 @@ PurpleClient.prototype = {
 
 	_addPersistentNotification: function() {
 		this._indicator.actor.add_style_class_name('pidgin-notification');
-		this._clickToFocusHandle = this._indicator.actor.connect('button-press-event', Lang.bind(this, this._focusChatWindow));
+
+		if (this._clickToFocusHandle == null) {
+			this._clickToFocusHandle = this._indicator.actor.connect('button-press-event', Lang.bind(this, this._focusChatWindow));
+		}
 	},
 
 	_removePersistentNotification: function() {
 		this._indicator.actor.remove_style_class_name('pidgin-notification');
 		this._indicator.actor.disconnect(this._clickToFocusHandle);
+		this._clickToFocusHandle = null;
 	},
 
 	/**
