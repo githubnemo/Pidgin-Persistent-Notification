@@ -32,6 +32,24 @@ const PurpleProxy = Gio.DBusProxy.makeProxyWrapper(PurpleIface);
 const PURPLE_CONV_UPDATE_UNSEEN = 4;
 const PURPLE_MESSAGE_SYSTEM = 0x4;
 
+/*
+  Retrieved using:
+
+  dbus-send --session --type=method_call --print-reply --dest=org.gajim.dbus \
+  /org/gajim/dbus/RemoteObject org.freedesktop.DBus.Introspectable.Introspect
+*/
+const GajimIface = '<node name="/org/gajim/dbus/RemoteObject">\
+	<interface name="org.gajim.dbus.RemoteInterface">\
+		<signal name="NewMessage">\
+			<arg type="av" name="account_and_array" />\
+		</signal>\
+	</interface>\
+</node>';
+
+const GajimProxy = Gio.DBusProxy.makeProxyWrapper(GajimIface);
+
+
+// Indicator shown in the panel menu to indicate a new message.
 const PersistentIndicator = new Lang.Class({
 	Name: 'PersistentIndicator',
 	Extends: PanelMenu.Button,
@@ -102,13 +120,104 @@ IndicatorExtension.prototype = {
 		this._gajimClient = new GajimClient(this._indicator);
 
 		this._purpleClient.connectToPurple();
+		this._gajimClient.connectToGajim();
 	},
 
 	disable: function() {
 		this._indicator.destroy();
 
 		this._purpleClient.disconnectFromPurple();
+		this._gajimClient.disconnectFromGajim();
 	}
+}
+
+function GajimClient(indicator) {
+	this._init(indicator);
+}
+
+GajimClient.prototype = {
+	_init: function(indicator) {
+		this._indicator = indicator;
+		this._windowUnmanagedHandle = null;
+		this._windowFocusHandle = null;
+		this._clickToFocusHandle = null;
+	},
+
+	connectToGajim: function() {
+		this._proxy = new GajimProxy(Gio.DBus.session,
+			'org.gajim.dbus', '/org/gajim/dbus/RemoteObject');
+
+		this._newMessageHandle = this._proxy.connectSignal('NewMessage',
+			Lang.bind(this, this._onNewMessage));
+	},
+
+	disconnectFromGajim: function() {
+		this._proxy.disconnectSignal(this._newMessageHandle);
+		this._proxy = null;
+
+		this._removePersistentNotification();
+	},
+
+	_onGajimWindowClose: function() {
+		this._removePersistentNotification();
+	},
+
+	_onGajimWindowFocus: function() {
+		global.log("Removing persistent notification on request");
+		this._removePersistentNotification();
+	},
+
+	_focusChatWindow: function() {
+		findWindowsByAppIdAndRole('gajim.desktop', 'messages').map(function(mw) {
+			focusWindow(mw);
+		});
+	},
+
+	_addPersistentNotification: function() {
+		this._indicator.actor.add_style_class_name('gajim-notification');
+		this._clickToFocusHandle = this._indicator.actor.connect('button-press-event', Lang.bind(this, this._focusChatWindow));
+
+		let that = this;
+
+		findWindowsByAppIdAndRole('gajim.desktop', 'messages').map(function(mw) {
+			if (that._windowUnmanagedHandle == null) {
+				that._windowUnmanagedHandle = mw.connect('unmanaged', Lang.bind(that, that._onGajimWindowClose));
+			}
+			if (that._windowFocusHandle == null) {
+				global.log("connecting focus!");
+				that._windowFocusHandle = mw.connect('focus', Lang.bind(that, that._onGajimWindowFocus));
+			}
+		});
+	},
+
+	_removePersistentNotification: function() {
+		this._indicator.actor.remove_style_class_name('gajim-notification');
+
+		if (this._clickToFocusHandle != null) {
+			this._indicator.actor.disconnect(this._clickToFocusHandle);
+			this._clickToFocusHandle = null;
+		}
+
+		let that = this;
+
+		findWindowsByAppIdAndRole('gajim.desktop', 'messages').map(function(mw) {
+			if (that._windowFocusHandle != null) {
+				mw.disconnect(that._windowFocusHandle);
+			}
+			if (that._windowUnmanagedHandle != null) {
+				mw.disconnect(that._windowUnmanagedHandle);
+			}
+		});
+
+		this._windowFocusHandle = null;
+		this._windowUnmanagedHandle = null;
+	},
+
+	_onNewMessage: function(_emitter, _handleId, params) {
+		if (!matchCurrentFocusApp("gajim.desktop")) {
+			this._addPersistentNotification();
+		}
+	},
 }
 
 function PurpleClient(indicator) {
