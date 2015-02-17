@@ -186,8 +186,11 @@ PurpleClient.prototype = {
 
 	_removePersistentNotification: function() {
 		this._indicator.actor.remove_style_class_name('pidgin-notification');
-		this._indicator.actor.disconnect(this._clickToFocusHandle);
-		this._clickToFocusHandle = null;
+
+		if (this._clickToFocusHandle != null) {
+			this._indicator.actor.disconnect(this._clickToFocusHandle);
+			this._clickToFocusHandle = null;
+		}
 	},
 
 	/**
