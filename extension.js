@@ -55,20 +55,70 @@ const PersistentIndicator = new Lang.Class({
 });
 
 
-function PurpleClient() {
-	this._init();
+// Find all windows with the supplied application ID, e.g. 'pidgin.desktop'
+function findWindowsByAppId(appId) {
+	let windowTracker = Shell.WindowTracker.get_default();
+
+	return global.screen.get_active_workspace().list_windows().filter(function(w) {
+		return windowTracker.get_window_app(w).get_id() == appId;
+	});
+}
+
+function focusWindow(metaWindow) {
+	metaWindow.activate(global.get_current_time());
+}
+
+function IndicatorExtension() {
+	return this._init();
+}
+
+IndicatorExtension.prototype = {
+
+	_init: function() {
+		this._indicator = null;
+		this._purpleClient = null;
+		this._gajimClient = null;
+	},
+
+	/**
+	 * Entry point of the extension.
+	 *
+	 * Setup handlers for when Pidgin joins, is already present on,
+	 * or leaves the bus.
+	 */
+	enable: function() {
+		this._indicator = new PersistentIndicator;
+
+		Main.panel.addToStatusArea('pidgin-persistent-notification', this._indicator, 1, 'right');
+
+		this._purpleClient = new PurpleClient(this._indicator);
+		this._gajimClient = new GajimClient(this._indicator);
+
+		this._purpleClient.connectToPurple();
+	},
+
+	disable: function() {
+		this._indicator.destroy();
+
+		this._purpleClient.disconnectFromPurple();
+	}
+}
+
+function PurpleClient(indicator) {
+	this._init(indicator);
 }
 
 PurpleClient.prototype = {
 
-	_init: function() {
-		this._indicator = null;
+	_init: function(indicator) {
+		this._indicator = indicator;
+		this._clickToFocusHandle = null;
 	},
 
 	/**
 	 * Connect signals and wait for action.
 	 */
-	_connectToPurple: function() {
+	connectToPurple: function() {
 		this._proxy = new PurpleProxy(Gio.DBus.session,
 			'im.pidgin.purple.PurpleService', '/im/pidgin/purple/PurpleObject');
 
@@ -109,48 +159,60 @@ PurpleClient.prototype = {
 		}
 	},
 
+	/**
+	 * Find the pidgin conversation window (if any) and return its MetaWindow
+	 * object. The right window is identified according to the window role
+	 * which is 'conversations' for the conversation window and "buddy_list"
+	 * for the roster.
+	 */
+	_findPidginChatMetaWindow: function() {
+		let pidginWindows = findWindowsByAppId("pidgin.desktop")
+
+		let conversationMetaWindows = pidginWindows.filter(function(mw) {
+			return mw.get_role() == "conversation";
+		})
+
+		if (conversationMetaWindows.length > 0) {
+			return conversationMetaWindows[0];
+		}
+
+		return null;
+	},
+
+	_focusChatWindow: function() {
+		let conversationMetaWindow = this._findPidginChatMetaWindow();
+
+		if (conversationMetaWindow == null) {
+			return;
+		}
+
+		focusWindow(conversationMetaWindow);
+	},
+
 	_addPersistentNotification: function() {
 		this._indicator.actor.add_style_class_name('pidgin-notification');
+		this._clickToFocusHandle = this._indicator.actor.connect('button-press-event', Lang.bind(this, this._focusChatWindow));
 	},
 
 	_removePersistentNotification: function() {
 		this._indicator.actor.remove_style_class_name('pidgin-notification');
+		this._indicator.actor.disconnect(this._clickToFocusHandle);
 	},
 
 	/**
 	 * Disconnect the Pidgin/libpurple signal listeners and remove
 	 * any notification as there's no way to reset it after disconnecting.
 	 */
-	_disconnectFromPurple: function() {
+	disconnectFromPurple: function() {
 		this._proxy.disconnectSignal(this._displayedImMessageId);
 		this._proxy.disconnectSignal(this._conversationUpdatedId);
 		this._proxy = null;
 
 		this._removePersistentNotification();
 	},
-
-	/**
-	 * Entry point of the extension.
-	 *
-	 * Setup handlers for when Pidgin joins, is already present on,
-	 * or leaves the bus.
-	 */
-	enable: function() {
-		this._indicator = new PersistentIndicator;
-
-		Main.panel.addToStatusArea('pidgin-persistent-notification', this._indicator, 1, 'right');
-
-		this._connectToPurple();
-	},
-
-	disable: function() {
-		this._indicator.destroy();
-
-		this._disconnectFromPurple();
-	}
 }
 
 
 function init() {
-	return new PurpleClient();
+	return new IndicatorExtension();
 }
