@@ -2,11 +2,6 @@
   "description": "Adds a persistent notification if a new message in Pidgin arrives. The notification is reset if the conversation window is focussed. Works best with the pidgin status integration extension.",
   "name": "Pidgin Persistent Notification",
   "shell-version": [
-    "3.2",
-	"3.3",
-	"3.4",
-	"3.6",
-	"3.8",
 	"3.10",
 	"3.12",
 	"3.14"
