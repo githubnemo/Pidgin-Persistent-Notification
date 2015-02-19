@@ -106,7 +106,20 @@ IndicatorExtension.prototype = {
 		this._indicator.destroy();
 
 		this._purpleClient.disconnectFromPurple();
-	}
+	},
+
+	_bindKeyboardShortcut: function() {
+		let settings = Convenience.getSettings('org.gnome.shell.extensions.pidgin-persistent-notifications');
+		settings.set_strv('pidgin-persistent-shortcut', [shortcut]);
+		Main.wm.addKeybinding('pidgin-persistent-shortcut', this._settings, Meta.KeyBindingFlags.NONE, Shell.KeyBindingMode.NORMAL, Lang.bind(this, function() {
+			// TODO: client.focusWindowIfUnread()
+		}));
+	},
+
+	_unbindKeyboardShortcut: function() {
+		Main.wm.removeKeybinding('pidgin-persistent-shortcut');
+	},
+
 }
 
 function PurpleClient(indicator) {
